@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CheckCloud · SLC · инструмент верификации облачных сред</title>
+  <style>
+    /* ГЛОБАЛЬНЫЙ СТИЛЬ (полностью повторяет главную) */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      font-size: 16px;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background-color: #0a0f0a;
+      color: #d0e0d0;
+      font-family: 'Inter', 'Roboto Mono', 'Courier New', monospace, system-ui, sans-serif;
+      line-height: 1.6;
+      font-weight: 400;
+      letter-spacing: 0.02em;
+      -webkit-font-smoothing: antialiased;
+      position: relative;
+      min-height: 100vh;
+      opacity: 1;
+      transition: opacity 0.4s ease;
+    }
+    
+    body.fade-out {
+      opacity: 0;
+    }
+
+    /* ФОНОВЫЕ ЭФФЕКТЫ */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: 
+        radial-gradient(circle at 20% 30%, #1a331a 0%, transparent 30%),
+        radial-gradient(circle at 80% 70%, #1f3f1f 0%, transparent 35%),
+        radial-gradient(circle at 40% 80%, #1a2f1a 0%, transparent 40%),
+        radial-gradient(circle at 90% 20%, #1e3a1e 0%, transparent 30%),
+        linear-gradient(135deg, #0a120a 0%, #0c150c 50%, #0b130b 100%);
+      z-index: -2;
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        repeating-linear-gradient(90deg, 
+          rgba(100, 255, 100, 0.03) 0px, 
+          rgba(100, 255, 100, 0.03) 2px,
+          transparent 2px, 
+          transparent 40px),
+        repeating-linear-gradient(0deg, 
+          rgba(100, 255, 100, 0.03) 0px, 
+          rgba(100, 255, 100, 0.03) 2px,
+          transparent 2px, 
+          transparent 40px),
+        repeating-linear-gradient(45deg, 
+          rgba(150, 255, 150, 0.02) 0px,
+          rgba(150, 255, 150, 0.02) 1px,
+          transparent 1px,
+          transparent 30px),
+        repeating-linear-gradient(-45deg, 
+          rgba(150, 255, 150, 0.02) 0px,
+          rgba(150, 255, 150, 0.02) 1px,
+          transparent 1px,
+          transparent 30px);
+      z-index: -1;
+      pointer-events: none;
+      animation: scan 12s linear infinite;
+    }
+
+    @keyframes scan {
+      0% {
+        background-position: 0 0, 0 0, 0 0, 0 0;
+      }
+      100% {
+        background-position: 40px 0, 0 40px, 30px 30px, -30px 30px;
+      }
+    }
+
+    .noise-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJmIj48ZmVUdXJidWxlbmNlIHR5cGU9ImZyYWN0YWxOb2lzZSIgYmFzZUZyZXF1ZW5jeT0iLjc0IiBudW1PY3RhdmVzPSIzIiAvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNmKSIgb3BhY2l0eT0iMC4wMjUiIC8+PC9zdmc+');
+      opacity: 0.15;
+      pointer-events: none;
+      z-index: -1;
+      mix-blend-mode: overlay;
+    }
+
+    .glow-spot {
+      position: fixed;
+      width: 600px;
+      height: 600px;
+      border-radius: 50%;
+      background: radial-gradient(circle at center, rgba(100, 255, 100, 0.08) 0%, transparent 70%);
+      top: 20%;
+      left: 15%;
+      z-index: -1;
+      pointer-events: none;
+      filter: blur(40px);
+      animation: floatGlow 20s ease-in-out infinite alternate;
+    }
+
+    .glow-spot-2 {
+      position: fixed;
+      width: 700px;
+      height: 700px;
+      border-radius: 50%;
+      background: radial-gradient(circle at center, rgba(80, 220, 80, 0.06) 0%, transparent 70%);
+      bottom: 10%;
+      right: 10%;
+      z-index: -1;
+      pointer-events: none;
+      filter: blur(60px);
+      animation: floatGlow2 25s ease-in-out infinite alternate;
+    }
+
+    @keyframes floatGlow {
+      0% { transform: translate(0, 0) scale(1); opacity: 0.4; }
+      100% { transform: translate(100px, 50px) scale(1.3); opacity: 0.7; }
+    }
+
+    @keyframes floatGlow2 {
+      0% { transform: translate(0, 0) scale(1); opacity: 0.3; }
+      100% { transform: translate(-80px, -80px) scale(1.4); opacity: 0.6; }
+    }
+
+    :root {
+      --bg-deep: #0a0f0a;
+      --bg-dark: #111711;
+      --bg-medium: #1a231a;
+      --border-light: #2a3a2a;
+      --text-bright: #f0fff0;
+      --text-dim: #a0c0a0;
+      --accent-mint: #b0ffb0;
+      --accent-soft: #80b080;
+      --grad-1: linear-gradient(135deg, #1a231a 0%, #2d402d 50%, #1a231a 100%);
+      --grad-2: linear-gradient(145deg, #0f150f 0%, #233023 70%);
+      --grad-3: linear-gradient(90deg, #111711, #2a3f2a, #111711);
+      --grad-4: radial-gradient(circle at 30% 30%, #1e2c1e, #0a0f0a 80%);
+      --grad-mint: linear-gradient(135deg, #d0ffd0, #80b080, #d0ffd0);
+      --glow-mint: 0 0 15px rgba(160, 255, 160, 0.2);
+    }
+
+    h1, h2, h3, h4 {
+      font-weight: 500;
+      letter-spacing: -0.01em;
+      color: var(--text-bright);
+    }
+
+    h1 {
+      font-size: 3.2rem;
+      line-height: 1.1;
+      font-weight: 700;
+      text-transform: uppercase;
+      background: var(--grad-mint);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      border-left: 6px solid #b0ffb0;
+      padding-left: 1.5rem;
+      text-shadow: 0 2px 10px rgba(160, 255, 160, 0.3);
+      position: relative;
+      z-index: 2;
+    }
+
+    h2 {
+      font-size: 1.9rem;
+      border-bottom: 1px solid var(--border-light);
+      padding-bottom: 0.5rem;
+      margin-bottom: 1.5rem;
+      text-transform: uppercase;
+      display: inline-block;
+      background: var(--grad-mint);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      border-bottom-color: #3a553a;
+      position: relative;
+      z-index: 2;
+    }
+
+    a {
+      color: #b0d0b0;
+      text-decoration: none;
+      border-bottom: 1px dotted #3a553a;
+      transition: all 0.15s ease;
+    }
+
+    a:hover {
+      color: #ffffff;
+      border-bottom: 2px solid #b0ffb0;
+    }
+
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 2rem 2.5rem;
+      position: relative;
+      z-index: 2;
+    }
+
+    /* ХЕДЕР */
+    .site-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      border: 2px solid #2a402a;
+      padding: 1.2rem 2rem;
+      margin-bottom: 3rem;
+      background: rgba(15, 21, 15, 0.75);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      box-shadow: 0 10px 25px -10px rgba(160, 255, 160, 0.2), inset 0 1px 3px rgba(160, 255, 160, 0.1);
+      position: relative;
+      z-index: 10;
+    }
+
+    .logo-area {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .logo {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: #f0fff0;
+      letter-spacing: -1px;
+      background: var(--grad-1);
+      padding: 0.2rem 1rem;
+      border: 1px solid #4a6a4a;
+      transform: skewX(-6deg);
+      text-shadow: 0 0 8px rgba(160, 255, 160, 0.4);
+    }
+
+    .logo span {
+      font-weight: 300;
+      background: var(--grad-mint);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .tagline {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      color: #a0c0a0;
+      border-left: 1px solid #3a553a;
+      padding-left: 20px;
+      background: var(--grad-mint);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .main-nav ul {
+      display: flex;
+      gap: 2rem;
+      list-style: none;
+    }
+
+    .main-nav a {
+      font-weight: 600;
+      font-size: 1.1rem;
+      border: none;
+      text-transform: lowercase;
+      border-bottom: 2px solid transparent;
+      padding-bottom: 4px;
+      background: linear-gradient(135deg, #a0d0a0, #f0fff0);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      transition: 0.2s;
+      cursor: pointer;
+    }
+
+    .main-nav a:hover {
+      border-bottom: 2px solid #b0ffb0;
+      background: linear-gradient(135deg, #f0fff0, #ffffff);
+      -webkit-background-clip: text;
+      background-clip: text;
+    }
+
+    .badge {
+      background: rgba(26, 35, 26, 0.8);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      border: 1px solid #3a553a;
+      color: #c0e0c0;
+      padding: 0.2rem 1rem;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      box-shadow: 0 2px 5px rgba(160, 255, 160, 0.1);
+    }
+
+    /* ОСОБЫЕ СТИЛИ ДЛЯ СТРАНИЦЫ CHECKCLOUD */
+    .product-hero {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3rem;
+      margin: 3rem 0 4rem 0;
+      align-items: center;
+    }
+
+    .product-title {
+      font-size: 4rem;
+      line-height: 1.1;
+      margin-bottom: 1rem;
+      background: var(--grad-mint);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      border-left: 6px solid #b0ffb0;
+      padding-left: 1.5rem;
+    }
+
+    .product-subtitle {
+      font-size: 1.3rem;
+      color: #c0e0c0;
+      margin-bottom: 2rem;
+    }
+
+    .product-icon {
+      font-size: 12rem;
+      text-align: center;
+      filter: drop-shadow(0 0 30px rgba(160, 255, 160, 0.5));
+      animation: float 6s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-20px); }
+    }
+
+    .download-btn {
+      display: inline-block;
+      background: linear-gradient(135deg, #1a3a1a, #2d5a2d);
+      border: 2px solid #6a9a6a;
+      padding: 1.2rem 3rem;
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #f0fff0;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      border-radius: 4px;
+      box-shadow: 0 0 30px rgba(160, 255, 160, 0.3);
+      transition: 0.3s;
+      margin: 1rem 0 2rem 0;
+      border-bottom: none;
+    }
+
+    .download-btn:hover {
+      background: linear-gradient(135deg, #2d5a2d, #1a3a1a);
+      border-color: #b0ffb0;
+      box-shadow: 0 0 50px rgba(160, 255, 160, 0.6);
+      transform: scale(1.05);
+      color: #ffffff;
+      border-bottom: 2px solid #b0ffb0;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2rem;
+      margin: 3rem 0;
+    }
+
+    .info-card {
+      background: rgba(15, 21, 15, 0.7);
+      border: 1px solid #2a3a2a;
+      padding: 2rem 1.5rem;
+      text-align: center;
+      backdrop-filter: blur(4px);
+    }
+
+    .info-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+
+    .info-card h3 {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 2rem;
+      margin: 2.5rem 0;
+    }
+
+    .feature-item {
+      background: rgba(15, 21, 15, 0.6);
+      border: 1px solid #2a3a2a;
+      padding: 2rem;
+      border-left: 4px solid #b0ffb0;
+    }
+
+    .feature-item h3 {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      color: #d0f0d0;
+    }
+
+    .tech-badge {
+      display: inline-block;
+      background: rgba(26, 35, 26, 0.9);
+      border: 1px solid #4a7a4a;
+      padding: 0.4rem 1.2rem;
+      margin: 0.3rem;
+      border-radius: 30px;
+      font-size: 0.9rem;
+      color: #b0ffb0;
+    }
+
+    .screenshots {
+      margin: 4rem 0;
+    }
+
+    .screenshot-placeholder {
+      background: rgba(10, 20, 10, 0.7);
+      border: 2px dashed #3a5a3a;
+      border-radius: 8px;
+      padding: 6rem 2rem;
+      text-align: center;
+      color: #80a080;
+      font-size: 1.2rem;
+    }
+
+    .version-info {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid #2a4a2a;
+      padding: 1rem 2rem;
+      display: inline-block;
+      border-radius: 40px;
+      margin: 1rem 0;
+    }
+
+    .site-footer {
+      margin-top: 5rem;
+      border-top: 1px solid #1a2a1a;
+      padding-top: 2rem;
+      color: #80a080;
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      font-size: 0.9rem;
+    }
+
+    .back-link {
+      margin: 2rem 0;
+      display: inline-block;
+      background: rgba(26, 35, 26, 0.6);
+      padding: 0.5rem 1.5rem;
+      border: 1px solid #3a5a3a;
+      cursor: pointer;
+    }
+
+    @media (max-width: 900px) {
+      .product-hero { grid-template-columns: 1fr; text-align: center; }
+      .product-title { border-left: none; padding-left: 0; }
+      .info-grid, .feature-grid { grid-template-columns: 1fr; }
+      h1 { font-size: 2.2rem; }
+    }
+
+    /* СТИЛИ ДЛЯ ЗАГРУЗКИ */
+    .page-loader {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #0a0f0a;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      transition: opacity 0.6s ease, visibility 0.6s ease;
+      opacity: 1;
+      visibility: visible;
+    }
+    
+    .page-loader.fade-out {
+      opacity: 0;
+      visibility: hidden;
+    }
+    
+    .loader-content {
+      text-align: center;
+    }
+    
+    .loader-logo {
+      font-size: 4rem;
+      font-weight: 800;
+      color: #f0fff0;
+      letter-spacing: -2px;
+      background: linear-gradient(135deg, #1a231a 0%, #2d402d 50%, #1a231a 100%);
+      padding: 0.5rem 2rem;
+      border: 2px solid #4a6a4a;
+      transform: skewX(-6deg);
+      text-shadow: 0 0 15px rgba(160, 255, 160, 0.5);
+      margin-bottom: 2rem;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    
+    .loader-spinner {
+      width: 60px;
+      height: 60px;
+      margin: 0 auto;
+      border: 3px solid rgba(100, 255, 100, 0.1);
+      border-top: 3px solid #b0ffb0;
+      border-right: 3px solid #80b080;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      box-shadow: 0 0 20px rgba(160, 255, 160, 0.3);
+    }
+    
+    .loader-text {
+      margin-top: 1.5rem;
+      color: #a0c0a0;
+      font-size: 1.2rem;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      animation: glow 2s ease-in-out infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    @keyframes pulse {
+      0%, 100% { transform: skewX(-6deg) scale(1); opacity: 1; }
+      50% { transform: skewX(-6deg) scale(1.05); opacity: 0.9; }
+    }
+    
+    @keyframes glow {
+      0%, 100% { text-shadow: 0 0 5px rgba(160, 255, 160, 0.3); }
+      50% { text-shadow: 0 0 20px rgba(160, 255, 160, 0.7); }
+    }
+  </style>
+</head>
+<body>
+  <!-- ЭКРАН ЗАГРУЗКИ -->
+  <div class="page-loader" id="pageLoader">
+    <div class="loader-content">
+      <div class="loader-logo">SLC</div>
+      <div class="loader-spinner"></div>
+      <div class="loader-text">загрузка...</div>
+    </div>
+  </div>
+
+  <!-- Фоновые эффекты -->
+  <div class="glow-spot"></div>
+  <div class="glow-spot-2"></div>
+  <div class="noise-overlay"></div>
+
+<div class="container">
+
+  <!-- ШАПКА -->
+  <header class="site-header">
+    <div class="logo-area">
+      <div class="logo">SLC<span>Team</span></div>
+      <div class="tagline">ShadowLuaCloud · checkcloud</div>
+    </div>
+    <nav class="main-nav">
+      <ul>
+        <li><a href="index.html">главная</a></li>
+        <li><a href="SLCteam.html">команда</a></li>
+        <li><a href="project.html">проекты</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <!-- HERO СЕКЦИЯ ПРОДУКТА -->
+  <div class="product-hero">
+    <div>
+      <div class="version-info">⚡ версия 0.4.2 · разработка</div>
+      <h1 class="product-title">checkcloud</h1>
+      <p class="product-subtitle">Утилита для удаление дебаггеров, управление shell, usernit, автозагрузка, реестр, winlogon, планировщик задач. Управление Windows пользователей.</p>
+      <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 2rem;">
+        <span class="tech-badge">C++</span>
+        <span class="tech-badge">WinAPI</span>
+        <span class="tech-badge">ImGui</span>
+      </div>
+      <a href="https://drive.google.com/file/d/15cdQkLyJLfQW3PAbH34sdGeKNy7mPptL/view?usp=sharing" class="download-btn">⬇️ СКАЧАТЬ (v0.1.7.2)</a>
+      <p style="color: #80a080;">Windows 10/11 · 64-bit · 485 КБ</p>
+    </div>
+    <div class="product-icon">☁️🔍</div>
+  </div>
+
+  <!-- КЛЮЧЕВАЯ ИНФОРМАЦИЯ -->
+  <div class="info-grid">
+    <div class="info-card">
+      <div class="info-icon">🛡️</div>
+      <h3>обнаружение истории приложений</h3>
+      <p>Выявление действий, изменений в Windows</p>
+    </div>
+    <div class="info-card">
+      <div class="info-icon">🔬</div>
+      <h3>анализ вирусных файлов</h3>
+      <p>Детектирование аномалий в неизведанных приложений</p>
+    </div>
+    <div class="info-card">
+      <div class="info-icon">⚡</div>
+      <h3>просмотр подсистем windows</h3>
+      <p>просмотр usernit, shell и т.д</p>
+    </div>
+  </div>
+
+  <!-- ПОДРОБНОЕ ОПИСАНИЕ -->
+  <h2>о программе</h2>
+  <div style="background: rgba(15, 21, 15, 0.6); border: 1px solid #2a3a2a; padding: 2.5rem; margin: 2rem 0;">
+    <p style="font-size: 1.2rem; margin-bottom: 1.5rem;">🔹 <strong>CheckCloud</strong> — Утилита для удаление дебаггеров, управление shell, usernit, автозагрузка, реестр, winlogon, планировщик задач. Управление Windows пользователей, разрабатываемое SLCTeam.</p>
+    <p style="margin-bottom: 1rem;">Программа выполняет глубокий анализ системы на наличие руткитов, скрытых процессов, недокументированных изменений в структурах ядра и аномалий гипервизора. В отличие от традиционных антивирусов, CheckCloud ориентирован на выявление сложных угроз, характерных для облачных сред и виртуализированных инфраструктур.</p>
+    <p>Ядро утилиты написано на C++ с использованием прямых системных вызовов (WinAPI/NTDLL) для обхода стандартных хуков. Интерфейс построен на ImGui, что обеспечивает низкое потребление ресурсов и возможность удаленного управления через терминал.</p>
+  </div>
+
+  <!-- ОСОБЕННОСТИ -->
+  <h2>ключевые возможности</h2>
+  <div class="feature-grid">
+    <div class="feature-item">
+      <h3>🔍 сканирование памяти</h3>
+      <p>Поиск скрытых процессов и драйверов через прямое обращение к структурам ядра (EPROCESS, PsLoadedModuleList).</p>
+    </div>
+    <div class="feature-item">
+      <h3>🧬 детект изменений</h3>
+      <p>Обнаружение следов изменений в системе</p>
+    </div>
+    <div class="feature-item">
+      <h3>📜 VirusTotal-проверки</h3>
+      <p>Проверка системы VirusTotal'ом</p>
+    </div>
+    <div class="feature-item">
+      <h3>🛡️ защита от детекта</h3>
+      <p>Многоуровневая анти-отладка, обфускация кода, запутывание импортов и шифрование строк.</p>
+    </div>
+    <div class="feature-item">
+      <h3>📊 отчетность</h3>
+      <p>Генерация детальных логов и JSON-отчетов для интеграции с SIEM и системами мониторинга.</p>
+    </div>
+    <div class="feature-item">
+      <h3>⚙️ низкоуровневый доступ</h3>
+      <p>Использование драйверных методов для чтения защищенных областей памяти (включая тестовый режим).</p>
+    </div>
+  </div>
+
+
+
+  <!-- ТЕХНИЧЕСКИЕ ДЕТАЛИ -->
+  <h2>технические характеристики</h2>
+  <div style="background: rgba(15, 21, 15, 0.7); border: 1px solid #2a3a2a; padding: 2rem; margin: 2rem 0;">
+    <ul style="list-style: none; display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+      <li>✓ <strong>Ядро:</strong> C++</li>
+      <li>✓ <strong>Интерфейс:</strong> ImGui</li>
+      <li>✓ <strong>Разрядность:</strong> x64</li>
+      <li>✓ <strong>Поддержка ОС:</strong> Windows 10/11</li>
+      <li>✓ <strong>Вес:</strong> 485 КБ (портативная версия)</li>
+      <li>✓ <strong>Лицензия:</strong> открытая</li>
+    </ul>
+  </div>
+
+  <!-- БЛОК ЗАГРУЗКИ (повтор для удобства) -->
+  <div style="text-align: center; margin: 4rem 0; padding: 3rem; background: rgba(15, 21, 15, 0.5); border: 2px solid #2a4a2a;">
+    <h2 style="border-bottom: none;">готовы к тестированию?</h2>
+    <p style="font-size: 1.2rem; margin: 1.5rem 0;">актуальная версия: v0.1.7.2 (ветка разработки)</p>
+    <a href="https://drive.google.com/file/d/15cdQkLyJLfQW3PAbH34sdGeKNy7mPptL/view?usp=sharing" class="download-btn" style="font-size: 1.8rem; padding: 1.5rem 4rem;">⬇️ СКАЧАТЬ CHECKCLOUD</a>
+    <p style="margin-top: 2rem; color: #80a080; font-size: 0.9rem;">md5: 7a8f3c2e1d5b9a4c8f0e3d2b1a6c7d8e · подпись SLC</p>
+  </div>
+
+
+
+  <!-- Футер -->
+  <footer class="site-footer">
+    <div>© ShadowLuaCloud (SLCTeam) 2026</div>
+    <div><a href="#" class="nav-link">github/slcteam/checkcloud</a></div>
+  </footer>
+
+</div>  
+<!-- конец container -->
+
+<!-- нижняя полоска -->
+<div style="background: linear-gradient(90deg, #0a0f0a, #b0ffb0, #0a0f0a); height:3px; width:100%;"></div>
+
+<!-- СКРИПТ ДЛЯ ЗАГРУЗКИ И ПЛАВНЫХ ПЕРЕХОДОВ -->
+<script>
+  (function() {
+    // Убираем экран загрузки после полной загрузки страницы
+    window.addEventListener('load', function() {
+      const loader = document.getElementById('pageLoader');
+      if (loader) {
+        setTimeout(function() {
+          loader.classList.add('fade-out');
+          setTimeout(function() {
+            loader.style.display = 'none';
+          }, 600);
+        }, 800);
+      }
+    });
+
+    // Плавные переходы между страницами
+    const navLinks = document.querySelectorAll('.nav-link');
+    
+    navLinks.forEach(link => {
+      link.addEventListener('click', function(e) {
+        const href = this.getAttribute('href');
+        if (href && !href.startsWith('#') && href !== '#' && href !== '') {
+          if (href === 'index.html' || href === 'team.html' || href === 'projects.html') {
+            e.preventDefault();
+            
+            const loader = document.getElementById('pageLoader');
+            if (loader) {
+              loader.style.display = 'flex';
+              loader.classList.remove('fade-out');
+            }
+            
+            document.body.classList.add('fade-out');
+            
+            setTimeout(function() {
+              window.location.href = href;
+            }, 400);
+          }
+        }
+      });
+    });
+  })();
+</script>
+</body>
+</html>

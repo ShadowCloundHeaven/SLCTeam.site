@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SLCTeam · ShadowLuaCloud · security research</title>
+  <style>
+    /* ГЛОБАЛЬНЫЙ СТИЛЬ */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      font-size: 16px;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background-color: #0a0f0a;
+      color: #d0e0d0;
+      font-family: 'Inter', 'Roboto Mono', 'Courier New', monospace, system-ui, sans-serif;
+      line-height: 1.6;
+      font-weight: 400;
+      letter-spacing: 0.02em;
+      -webkit-font-smoothing: antialiased;
+      position: relative;
+      min-height: 100vh;
+    }
+
+    /* КРАСИВЫЙ ФОН С ЭФФЕКТАМИ */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: 
+        radial-gradient(circle at 20% 30%, #1a331a 0%, transparent 30%),
+        radial-gradient(circle at 80% 70%, #1f3f1f 0%, transparent 35%),
+        radial-gradient(circle at 40% 80%, #1a2f1a 0%, transparent 40%),
+        radial-gradient(circle at 90% 20%, #1e3a1e 0%, transparent 30%),
+        linear-gradient(135deg, #0a120a 0%, #0c150c 50%, #0b130b 100%);
+      z-index: -2;
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        repeating-linear-gradient(90deg, 
+          rgba(100, 255, 100, 0.03) 0px, 
+          rgba(100, 255, 100, 0.03) 2px,
+          transparent 2px, 
+          transparent 40px),
+        repeating-linear-gradient(0deg, 
+          rgba(100, 255, 100, 0.03) 0px, 
+          rgba(100, 255, 100, 0.03) 2px,
+          transparent 2px, 
+          transparent 40px),
+        repeating-linear-gradient(45deg, 
+          rgba(150, 255, 150, 0.02) 0px,
+          rgba(150, 255, 150, 0.02) 1px,
+          transparent 1px,
+          transparent 30px),
+        repeating-linear-gradient(-45deg, 
+          rgba(150, 255, 150, 0.02) 0px,
+          rgba(150, 255, 150, 0.02) 1px,
+          transparent 1px,
+          transparent 30px);
+      z-index: -1;
+      pointer-events: none;
+      animation: scan 12s linear infinite;
+    }
+
+    @keyframes scan {
+      0% {
+        background-position: 0 0, 0 0, 0 0, 0 0;
+      }
+      100% {
+        background-position: 40px 0, 0 40px, 30px 30px, -30px 30px;
+      }
+    }
+
+    .noise-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJmIj48ZmVUdXJidWxlbmNlIHR5cGU9ImZyYWN0YWxOb2lzZSIgYmFzZUZyZXF1ZW5jeT0iLjc0IiBudW1PY3RhdmVzPSIzIiAvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNmKSIgb3BhY2l0eT0iMC4wMjUiIC8+PC9zdmc+');
+      opacity: 0.15;
+      pointer-events: none;
+      z-index: -1;
+      mix-blend-mode: overlay;
+    }
+
+    .glow-spot {
+      position: fixed;
+      width: 600px;
+      height: 600px;
+      border-radius: 50%;
+      background: radial-gradient(circle at center, rgba(100, 255, 100, 0.08) 0%, transparent 70%);
+      top: 20%;
+      left: 15%;
+      z-index: -1;
+      pointer-events: none;
+      filter: blur(40px);
+      animation: floatGlow 20s ease-in-out infinite alternate;
+    }
+
+    .glow-spot-2 {
+      position: fixed;
+      width: 700px;
+      height: 700px;
+      border-radius: 50%;
+      background: radial-gradient(circle at center, rgba(80, 220, 80, 0.06) 0%, transparent 70%);
+      bottom: 10%;
+      right: 10%;
+      z-index: -1;
+      pointer-events: none;
+      filter: blur(60px);
+      animation: floatGlow2 25s ease-in-out infinite alternate;
+    }
+
+    @keyframes floatGlow {
+      0% { transform: translate(0, 0) scale(1); opacity: 0.4; }
+      100% { transform: translate(100px, 50px) scale(1.3); opacity: 0.7; }
+    }
+
+    @keyframes floatGlow2 {
+      0% { transform: translate(0, 0) scale(1); opacity: 0.3; }
+      100% { transform: translate(-80px, -80px) scale(1.4); opacity: 0.6; }
+    }
+
+    :root {
+      --bg-deep: #0a0f0a;
+      --bg-dark: #111711;
+      --bg-medium: #1a231a;
+      --border-light: #2a3a2a;
+      --text-bright: #f0fff0;
+      --text-dim: #a0c0a0;
+      --accent-mint: #b0ffb0;
+      --accent-soft: #80b080;
+      --grad-1: linear-gradient(135deg, #1a231a 0%, #2d402d 50%, #1a231a 100%);
+      --grad-2: linear-gradient(145deg, #0f150f 0%, #233023 70%);
+      --grad-3: linear-gradient(90deg, #111711, #2a3f2a, #111711);
+      --grad-4: radial-gradient(circle at 30% 30%, #1e2c1e, #0a0f0a 80%);
+      --grad-mint: linear-gradient(135deg, #d0ffd0, #80b080, #d0ffd0);
+      --glow-mint: 0 0 15px rgba(160, 255, 160, 0.2);
+    }
+
+    h1, h2, h3, h4 {
+      font-weight: 500;
+      letter-spacing: -0.01em;
+      color: var(--text-bright);
+    }
+
+    h1 {
+      font-size: 3.2rem;
+      line-height: 1.1;
+      font-weight: 700;
+      text-transform: uppercase;
+      background: var(--grad-mint);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      border-left: 6px solid #b0ffb0;
+      padding-left: 1.5rem;
+      text-shadow: 0 2px 10px rgba(160, 255, 160, 0.3);
+      position: relative;
+      z-index: 2;
+    }
+
+    h2 {
+      font-size: 1.9rem;
+      border-bottom: 1px solid var(--border-light);
+      padding-bottom: 0.5rem;
+      margin-bottom: 1.5rem;
+      text-transform: uppercase;
+      display: inline-block;
+      background: var(--grad-mint);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      border-bottom-color: #3a553a;
+      position: relative;
+      z-index: 2;
+    }
+
+    a {
+      color: #b0d0b0;
+      text-decoration: none;
+      border-bottom: 1px dotted #3a553a;
+      transition: all 0.15s ease;
+    }
+
+    a:hover {
+      color: #ffffff;
+      border-bottom: 2px solid #b0ffb0;
+    }
+
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 2rem 2.5rem;
+      position: relative;
+      z-index: 2;
+    }
+
+    /* ХЕДЕР - ПЕРВЫЙ СКРИН (РУССКИЙ) */
+    .site-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      border: 2px solid #2a402a;
+      padding: 1.2rem 2rem;
+      margin-bottom: 3rem;
+      background: rgba(15, 21, 15, 0.75);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      box-shadow: 0 10px 25px -10px rgba(160, 255, 160, 0.2), inset 0 1px 3px rgba(160, 255, 160, 0.1);
+      position: relative;
+      z-index: 10;
+    }
+
+    .logo-area {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .logo {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: #f0fff0;
+      letter-spacing: -1px;
+      background: var(--grad-1);
+      padding: 0.2rem 1rem;
+      border: 1px solid #4a6a4a;
+      transform: skewX(-6deg);
+      text-shadow: 0 0 8px rgba(160, 255, 160, 0.4);
+    }
+
+    .logo span {
+      font-weight: 300;
+      background: var(--grad-mint);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .tagline {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      color: #a0c0a0;
+      border-left: 1px solid #3a553a;
+      padding-left: 20px;
+      background: var(--grad-mint);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .main-nav ul {
+      display: flex;
+      gap: 2rem;
+      list-style: none;
+    }
+
+    /* НАВИГАЦИЯ ТЕПЕРЬ НА РУССКОМ */
+    .main-nav a {
+      font-weight: 600;
+      font-size: 1.1rem;
+      border: none;
+      text-transform: lowercase;
+      border-bottom: 2px solid transparent;
+      padding-bottom: 4px;
+      background: linear-gradient(135deg, #a0d0a0, #f0fff0);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      transition: 0.2s;
+    }
+
+    .main-nav a:hover {
+      border-bottom: 2px solid #b0ffb0;
+      background: linear-gradient(135deg, #f0fff0, #ffffff);
+      -webkit-background-clip: text;
+      background-clip: text;
+    }
+
+    /* КАРТОЧКИ */
+    .hero {
+      padding: 3rem 0 3rem 0;
+      border-bottom: 1px solid #1a2a1a;
+      margin-bottom: 3rem;
+      background: transparent;
+      position: relative;
+      z-index: 2;
+    }
+
+    .hero p {
+      font-size: 1.3rem;
+      max-width: 800px;
+      background: linear-gradient(145deg, #c0e0c0, #f0fff0);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      text-shadow: 0 0 20px rgba(160, 255, 160, 0.2);
+    }
+
+    .grid-2, .grid-3, .grid-tech {
+      display: grid;
+      gap: 2rem;
+      margin: 2.5rem 0;
+    }
+
+    .grid-2 { grid-template-columns: repeat(2, 1fr); }
+    .grid-3 { grid-template-columns: repeat(3, 1fr); }
+    .grid-tech { 
+      grid-template-columns: repeat(3, 1fr);
+      align-items: stretch;
+    }
+
+    .card {
+      background: rgba(15, 21, 15, 0.75);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid #2a3a2a;
+      padding: 2rem 1.8rem;
+      transition: 0.2s ease;
+      box-shadow: 0 5px 0 #1a251a, 0 0 30px rgba(0, 0, 0, 0.5);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--grad-mint);
+      opacity: 0.4;
+    }
+
+    .card:hover {
+      border-color: #6a9a6a;
+      background: rgba(26, 35, 26, 0.85);
+      box-shadow: 0 8px 0 #2a402a, var(--glow-mint), 0 0 40px rgba(160, 255, 160, 0.2);
+      transform: translateY(-2px);
+    }
+
+    .card:hover::before {
+      opacity: 1;
+      height: 4px;
+    }
+
+    .card h3 {
+      font-size: 1.6rem;
+      margin-bottom: 1rem;
+      border-left: 3px solid #80b080;
+      padding-left: 1rem;
+      background: linear-gradient(135deg, #f0fff0, #a0d0a0);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .card .meta {
+      color: #80a080;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+      border-top: 1px dashed #2a402a;
+      padding-top: 1rem;
+      margin-top: 1.2rem;
+    }
+
+    /* карточки технологий */
+    .tech-card {
+      background: rgba(15, 21, 15, 0.75);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid #2a3a2a;
+      padding: 1.5rem 1rem;
+      transition: 0.2s ease;
+      box-shadow: 0 5px 0 #1a251a, 0 0 30px rgba(0, 0, 0, 0.5);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      height: 100%;
+    }
+
+    .tech-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--grad-mint);
+      opacity: 0.4;
+    }
+
+    .tech-card:hover {
+      border-color: #6a9a6a;
+      background: rgba(26, 35, 26, 0.85);
+      box-shadow: 0 8px 0 #2a402a, var(--glow-mint), 0 0 40px rgba(160, 255, 160, 0.2);
+      transform: translateY(-2px);
+    }
+
+    .tech-card:hover::before {
+      opacity: 1;
+      height: 4px;
+    }
+
+    .tech-icon {
+      font-size: 2.5rem;
+      margin-bottom: 0.8rem;
+      line-height: 1;
+      filter: drop-shadow(0 0 8px rgba(160, 255, 160, 0.5));
+    }
+
+    .tech-card h3 {
+      font-size: 1.4rem;
+      margin-bottom: 0.5rem;
+      border-left: none;
+      padding-left: 0;
+      background: linear-gradient(135deg, #f0fff0, #a0d0a0);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      text-align: center;
+    }
+
+    .tech-card .meta {
+      color: #80a080;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      border-top: 1px dashed #2a402a;
+      padding-top: 0.8rem;
+      margin-top: 0.5rem;
+      width: 100%;
+      text-align: center;
+    }
+
+    .badge {
+      background: rgba(26, 35, 26, 0.8);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      border: 1px solid #3a553a;
+      color: #c0e0c0;
+      padding: 0.2rem 1rem;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      box-shadow: 0 2px 5px rgba(160, 255, 160, 0.1);
+    }
+
+    /* СТИЛИ ДЛЯ КОМАНДЫ */
+    .team-section {
+      margin: 3rem 0 4rem 0;
+    }
+
+    .team-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 2rem;
+      margin-top: 2rem;
+    }
+
+    .team-card {
+      background: rgba(15, 21, 15, 0.75);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid #2a3a2a;
+      padding: 2rem 1.5rem;
+      transition: 0.2s ease;
+      box-shadow: 0 5px 0 #1a251a, 0 0 30px rgba(0, 0, 0, 0.5);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .team-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--grad-mint);
+      opacity: 0.4;
+    }
+
+    .team-card:hover {
+      border-color: #6a9a6a;
+      background: rgba(26, 35, 26, 0.85);
+      box-shadow: 0 8px 0 #2a402a, var(--glow-mint), 0 0 40px rgba(160, 255, 160, 0.2);
+      transform: translateY(-2px);
+    }
+
+    .team-card:hover::before {
+      opacity: 1;
+      height: 4px;
+    }
+
+    .team-avatar {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      background: var(--grad-2);
+      border: 2px solid #4a6a4a;
+      margin-bottom: 1.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+      color: #b0ffb0;
+      box-shadow: 0 0 20px rgba(160, 255, 160, 0.3);
+    }
+
+    .team-card h3 {
+      font-size: 1.8rem;
+      margin-bottom: 0.3rem;
+      border-left: none;
+      padding-left: 0;
+      background: linear-gradient(135deg, #f0fff0, #a0d0a0);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .team-role {
+      font-size: 1rem;
+      color: #a0c0a0;
+      margin-bottom: 1rem;
+      font-family: 'Courier New', monospace;
+      border-bottom: 1px dashed #3a553a;
+      padding-bottom: 0.8rem;
+      width: 100%;
+    }
+
+    .team-bio {
+      color: #c0e0c0;
+      font-size: 0.95rem;
+      margin-bottom: 1rem;
+    }
+
+    .team-links {
+      display: flex;
+      gap: 1rem;
+      margin-top: 0.5rem;
+    }
+
+    .team-links a {
+      color: #80b080;
+      font-size: 1.2rem;
+      border: none;
+    }
+
+    .team-links a:hover {
+      color: #b0ffb0;
+    }
+
+    /* футер */
+    .site-footer {
+      margin-top: 5rem;
+      border-top: 1px solid #1a2a1a;
+      padding-top: 2rem;
+      color: #80a080;
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      font-size: 0.9rem;
+      position: relative;
+      z-index: 2;
+    }
+
+    /* адаптив */
+    @media (max-width: 800px) {
+      .grid-2, .grid-3, .grid-tech { grid-template-columns: 1fr; }
+      .site-header { flex-direction: column; align-items: start; gap: 1rem; }
+      h1 { font-size: 2.2rem; }
+      .container { padding: 1.5rem; }
+      .team-grid { grid-template-columns: 1fr; }
+    }
+
+    /* БЛОК ПРОЕКТЫ — выровнено в соответствии с референсом */
+    .projects-section {
+      margin: 3rem 0 2rem 0;
+    }
+
+    .projects-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 2rem;
+      margin: 2rem 0 1.5rem 0;
+    }
+
+    .project-card {
+      background: rgba(15, 21, 15, 0.75);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid #2a3a2a;
+      padding: 2rem 2rem;
+      transition: 0.2s ease;
+      box-shadow: 0 5px 0 #1a251a, 0 0 30px rgba(0, 0, 0, 0.5);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .project-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--grad-mint);
+      opacity: 0.4;
+    }
+
+    .project-card:hover {
+      border-color: #6a9a6a;
+      background: rgba(26, 35, 26, 0.85);
+      box-shadow: 0 8px 0 #2a402a, var(--glow-mint), 0 0 40px rgba(160, 255, 160, 0.2);
+      transform: translateY(-2px);
+    }
+
+    .project-card:hover::before {
+      opacity: 1;
+      height: 4px;
+    }
+
+    .project-header {
+      display: flex;
+      align-items: baseline;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+
+    .project-team {
+      font-size: 1.2rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, #c0e0c0, #f0fff0);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      letter-spacing: -0.01em;
+    }
+
+    .project-title {
+      font-size: 2rem;
+      font-weight: 700;
+      background: var(--grad-mint);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      border-left: 3px solid #b0ffb0;
+      padding-left: 1rem;
+      margin: 0.5rem 0 1rem 0;
+      line-height: 1.2;
+    }
+
+    .project-desc {
+      color: #d0e8d0;
+      margin-bottom: 1.5rem;
+      font-size: 1.1rem;
+    }
+
+    .project-meta {
+      color: #80a080;
+      font-family: 'Courier New', monospace;
+      font-size: 1rem;
+      border-top: 1px dashed #2a402a;
+      padding-top: 1.2rem;
+      margin-top: 0.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .tech-stack {
+      display: flex;
+      gap: 0.8rem;
+      flex-wrap: wrap;
+      background: rgba(26, 35, 26, 0.6);
+      padding: 0.4rem 1rem;
+      border-radius: 20px;
+      border: 1px solid #3a553a;
+    }
+
+    .project-link {
+      font-weight: 600;
+      border: none;
+      background: linear-gradient(135deg, #b0ffb0, #f0fff0);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      border-bottom: 2px solid transparent;
+      padding-bottom: 2px;
+    }
+
+    .project-link:hover {
+      border-bottom: 2px solid #b0ffb0;
+      background: linear-gradient(135deg, #ffffff, #ffffff);
+      -webkit-background-clip: text;
+      background-clip: text;
+    }
+
+    .all-projects-link {
+      text-align: right;
+      margin-top: 1rem;
+      font-size: 1.1rem;
+    }
+
+    .all-projects-link a {
+      border: none;
+      background: linear-gradient(135deg, #c0e0c0, #ffffff);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      font-weight: 600;
+    }
+
+    .dev-status {
+      display: inline-block;
+      background: rgba(160, 255, 160, 0.15);
+      border: 1px solid #5a8f5a;
+      border-radius: 30px;
+      padding: 0.2rem 1.2rem;
+      font-size: 0.9rem;
+      color: #b0ffb0;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Фоновые эффекты -->
+  <div class="glow-spot"></div>
+  <div class="glow-spot-2"></div>
+  <div class="noise-overlay"></div>
+
+<div class="container">
+
+  <!-- ШАПКА SLCTeam / ShadowLuaCloud -->
+  <header class="site-header">
+    <div class="logo-area">
+      <div class="logo">SLC<span>Team</span></div>
+      <div class="tagline">ShadowLuaCloud · security research</div>
+    </div>
+    <nav class="main-nav">
+      <ul>
+        <li><a href="index.html">главная</a></li>
+        <li><a href="SLCteam.html">команда</a></li>
+        <li><a href="project.html">проекты</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <!-- О команде -->
+  <section class="hero">
+    <h1>SLCTeam · Кибербезопасность</h1>
+    <p>Мы — ShadowLuaCloud (SLC) — команда исследователей безопасности, разработчиков и реверс-инженеров. Специализируемся на low-level анализе, виртуализации, разработке инструментов для пентеста и защите от эксплойтов.</p>
+    <div style="margin-top: 2rem; display: flex; gap: 20px; flex-wrap: wrap;">
+      <span class="badge">#research</span>
+      <span class="badge">#reverse</span>
+      <span class="badge">#exploit-dev</span>
+      <span class="badge">#vmlabs</span>
+    </div>
+  </section>
+
+  <!-- Направления деятельности (оставлено как было) -->
+  <h2>Направления</h2>
+  <div class="grid-3">
+    <article class="card">
+      <h3>🔍 Исследование безопасности</h3>
+      <p>Поиск уязвимостей в виртуализации (Firecracker, QEMU), браузерах, ядре Linux. Анализ сложных векторов атак.</p>
+      <div class="meta">CVE · 0-day · фаззинг</div>
+    </article>
+    <article class="card">
+      <h3>⚙️ Разработка</h3>
+      <p>Создание инструментов для реверс-инжиниринга, фреймворков для эксплуатации, низкоуровневых библиотек и песочниц.</p>
+      <div class="meta">C++ · Lua · Python · Java</div>
+    </article>
+    <article class="card">
+      <h3>🔄 Реверс-инжиниринг</h3>
+      <p>Декомпиляция, анализ вредоносного ПО, восстановление алгоритмов, работа с обфусцированным кодом и шеллкодами.</p>
+      <div class="meta">IDA · Ghidra · x64dbg</div>
+    </article>
+  </div>
+
+  <!-- Технологический стек -->
+  <h2>Стек технологий</h2>
+  <div class="grid-tech" style="margin-bottom: 2rem;">
+    <div class="tech-card">
+      <div class="tech-icon">⚡</div>
+      <h3>C++</h3>
+      <div class="meta">ядро, драйверы, фаззинг</div>
+    </div>
+    <div class="tech-card">
+      <div class="tech-icon">🌙</div>
+      <h3>Lua</h3>
+      <div class="meta">LuaJIT, песочницы, эксплоиты</div>
+    </div>
+    <div class="tech-card">
+      <div class="tech-icon">🪟</div>
+      <h3>WinAPI</h3>
+      <div class="meta">низкоуровневый Windows</div>
+    </div>
+    <div class="tech-card">
+      <div class="tech-icon">🎨</div>
+      <h3>IMGui</h3>
+      <div class="meta">интерфейсы для тулов</div>
+    </div>
+    <div class="tech-card">
+      <div class="tech-icon">🐍</div>
+      <h3>Python</h3>
+      <div class="meta">автоматизация, эксплоиты</div>
+    </div>
+    <div class="tech-card">
+      <div class="tech-icon">☕</div>
+      <h3>Java</h3>
+      <div class="meta">кроссплатформа, Android</div>
+    </div>
+  </div>
+
+  <!-- ========== БЛОК ПРОЕКТЫ (ВЫШЕ КОМАНДЫ) ========== -->
+  <section class="projects-section">
+    <h2>ПРОЕКТЫ</h2>
+    <p style="color: #a0c0a0; margin-bottom: 1.5rem;">Наш текущий проект в разработке</p>
+
+    <div class="projects-grid">
+      <!-- Один проект: checkcloud (в разработке) -->
+      <div class="project-card">
+        <div class="project-header">
+          <span class="project-team">SLCTeam</span>
+          <span class="dev-status">⏱ общедоступен</span>
+        </div>
+        <h3 class="project-title">CheckCloud</h3>
+        <p class="project-desc">
+          Утилита для удаление дебаггеров, управление shell, usernit, автозагрузка, реестр, winlogon, планировщик задач. Управление Windows пользователей.
+        </p>
+        <div class="project-meta">
+          <span class="tech-stack">C++ · WinAPI · ImGui </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ссылка "Все проекты →" (неактивная, для демонстрации) -->
+    <div class="all-projects-link">
+      <a href="project.html">Все проекты →</a>
+    </div>
+  </section>
+
+  <!-- ========== БЛОК КОМАНДА (ТЕПЕРЬ НИЖЕ ПРОЕКТОВ) ========== -->
+  <section class="team-section">
+    <h2>КОМАНДА</h2>
+    <p style="color: #a0c0a0; margin-bottom: 1rem;">Участники нашей команды</p>
+    
+    <div class="team-grid">
+      <!-- Один разработчик ShadowCloudHeaven -->
+      <div class="team-card">
+        <div class="team-avatar">💚</div>
+        <h3>ShadowCloudHeaven</h3>
+        <div class="team-role">Developer / Разработчик</div>
+        <div class="team-bio">
+          Автор и разработчик SLCTeam.
+        </div>
+        <div class="team-links">
+          <a href="https://github.com/ShadowCloundHeaven">🔗 github</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- О нас подробнее -->
+  <div class="grid-2" style="margin-top: 1rem;">
+    <div class="card" style="padding: 2rem;">
+      <h3 style="border-left-color: #b0ffb0;">👥 Кто мы</h3>
+      <p>SLCTeam — небольшая группа энтузиастов, объединённых интересом к исследованию безопасности на низком уровне. Мы занимаемся реверс-инжинирингом, разработкой эксплойтов, анализом защитных механизмов и созданием собственных инструментов.</p>
+      <p style="margin-top: 1rem;"><code style="background: #1a231a; border-color: #3a553a; padding: 0.2rem 0.5rem;">Telegram: @shadowcloudheaven</code></p>
+    </div>
+    <div class="card" style="padding: 2rem;">
+      <h3 style="border-left-color: #b0ffb0;">🎯 Чем занимаемся</h3>
+      <ul style="list-style: none;">
+        <li style="margin-bottom: 0.8rem; color: #c0e0c0;">✓ Анализ уязвимостей в виртуализации</li>
+        <li style="margin-bottom: 0.8rem; color: #c0e0c0;">✓ Разработка низкоуровневых тулов (C++/Lua)</li>
+        <li style="margin-bottom: 0.8rem; color: #c0e0c0;">✓ Реверс малвари и обфусцированного кода</li>
+        <li style="margin-bottom: 0.8rem; color: #c0e0c0;">✓ Исследование защит Windows (WinAPI, детекты)</li>
+        <li style="margin-bottom: 0.8rem; color: #c0e0c0;">✓ Создание GUI для эксплоитов (IMGui)</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- footer -->
+  <footer class="site-footer">
+    <div>© ShadowLuaCloud (SLCTeam) 2026</div>
+    <div>
+      <a href=""></a> &nbsp;|&nbsp; 
+    </div>
+  </footer>
+
+</div>  
+<!-- container end -->
+
+<!-- нижняя полоска -->
+<div style="background: linear-gradient(90deg, #0a0f0a, #b0ffb0, #0a0f0a); height:3px; width:100%; margin-top:0; position: relative; z-index: 10;"></div>
+</body>
+</html>

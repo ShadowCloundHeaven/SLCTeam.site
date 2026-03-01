@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SLCTeam · проекты · ShadowLuaCloud</title>
+  <style>
+    /* ГЛОБАЛЬНЫЙ СТИЛЬ (полностью повторяет главную + дополнения для страницы проектов) */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      font-size: 16px;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background-color: #0a0f0a;
+      color: #d0e0d0;
+      font-family: 'Inter', 'Roboto Mono', 'Courier New', monospace, system-ui, sans-serif;
+      line-height: 1.6;
+      font-weight: 400;
+      letter-spacing: 0.02em;
+      -webkit-font-smoothing: antialiased;
+      position: relative;
+      min-height: 100vh;
+      opacity: 1;
+      transition: opacity 0.4s ease;
+    }
+    
+    body.fade-out {
+      opacity: 0;
+    }
+
+    /* ФОНОВЫЕ ЭФФЕКТЫ (как на главной) */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: 
+        radial-gradient(circle at 20% 30%, #1a331a 0%, transparent 30%),
+        radial-gradient(circle at 80% 70%, #1f3f1f 0%, transparent 35%),
+        radial-gradient(circle at 40% 80%, #1a2f1a 0%, transparent 40%),
+        radial-gradient(circle at 90% 20%, #1e3a1e 0%, transparent 30%),
+        linear-gradient(135deg, #0a120a 0%, #0c150c 50%, #0b130b 100%);
+      z-index: -2;
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        repeating-linear-gradient(90deg, 
+          rgba(100, 255, 100, 0.03) 0px, 
+          rgba(100, 255, 100, 0.03) 2px,
+          transparent 2px, 
+          transparent 40px),
+        repeating-linear-gradient(0deg, 
+          rgba(100, 255, 100, 0.03) 0px, 
+          rgba(100, 255, 100, 0.03) 2px,
+          transparent 2px, 
+          transparent 40px),
+        repeating-linear-gradient(45deg, 
+          rgba(150, 255, 150, 0.02) 0px,
+          rgba(150, 255, 150, 0.02) 1px,
+          transparent 1px,
+          transparent 30px),
+        repeating-linear-gradient(-45deg, 
+          rgba(150, 255, 150, 0.02) 0px,
+          rgba(150, 255, 150, 0.02) 1px,
+          transparent 1px,
+          transparent 30px);
+      z-index: -1;
+      pointer-events: none;
+      animation: scan 12s linear infinite;
+    }
+
+    @keyframes scan {
+      0% {
+        background-position: 0 0, 0 0, 0 0, 0 0;
+      }
+      100% {
+        background-position: 40px 0, 0 40px, 30px 30px, -30px 30px;
+      }
+    }
+
+    .noise-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJmIj48ZmVUdXJidWxlbmNlIHR5cGU9ImZyYWN0YWxOb2lzZSIgYmFzZUZyZXF1ZW5jeT0iLjc0IiBudW1PY3RhdmVzPSIzIiAvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNmKSIgb3BhY2l0eT0iMC4wMjUiIC8+PC9zdmc+');
+      opacity: 0.15;
+      pointer-events: none;
+      z-index: -1;
+      mix-blend-mode: overlay;
+    }
+
+    .glow-spot {
+      position: fixed;
+      width: 600px;
+      height: 600px;
+      border-radius: 50%;
+      background: radial-gradient(circle at center, rgba(100, 255, 100, 0.08) 0%, transparent 70%);
+      top: 20%;
+      left: 15%;
+      z-index: -1;
+      pointer-events: none;
+      filter: blur(40px);
+      animation: floatGlow 20s ease-in-out infinite alternate;
+    }
+
+    .glow-spot-2 {
+      position: fixed;
+      width: 700px;
+      height: 700px;
+      border-radius: 50%;
+      background: radial-gradient(circle at center, rgba(80, 220, 80, 0.06) 0%, transparent 70%);
+      bottom: 10%;
+      right: 10%;
+      z-index: -1;
+      pointer-events: none;
+      filter: blur(60px);
+      animation: floatGlow2 25s ease-in-out infinite alternate;
+    }
+
+    @keyframes floatGlow {
+      0% { transform: translate(0, 0) scale(1); opacity: 0.4; }
+      100% { transform: translate(100px, 50px) scale(1.3); opacity: 0.7; }
+    }
+
+    @keyframes floatGlow2 {
+      0% { transform: translate(0, 0) scale(1); opacity: 0.3; }
+      100% { transform: translate(-80px, -80px) scale(1.4); opacity: 0.6; }
+    }
+
+    :root {
+      --bg-deep: #0a0f0a;
+      --bg-dark: #111711;
+      --bg-medium: #1a231a;
+      --border-light: #2a3a2a;
+      --text-bright: #f0fff0;
+      --text-dim: #a0c0a0;
+      --accent-mint: #b0ffb0;
+      --accent-soft: #80b080;
+      --grad-1: linear-gradient(135deg, #1a231a 0%, #2d402d 50%, #1a231a 100%);
+      --grad-2: linear-gradient(145deg, #0f150f 0%, #233023 70%);
+      --grad-3: linear-gradient(90deg, #111711, #2a3f2a, #111711);
+      --grad-4: radial-gradient(circle at 30% 30%, #1e2c1e, #0a0f0a 80%);
+      --grad-mint: linear-gradient(135deg, #d0ffd0, #80b080, #d0ffd0);
+      --glow-mint: 0 0 15px rgba(160, 255, 160, 0.2);
+    }
+
+    h1, h2, h3, h4 {
+      font-weight: 500;
+      letter-spacing: -0.01em;
+      color: var(--text-bright);
+    }
+
+    h1 {
+      font-size: 3.2rem;
+      line-height: 1.1;
+      font-weight: 700;
+      text-transform: uppercase;
+      background: var(--grad-mint);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      border-left: 6px solid #b0ffb0;
+      padding-left: 1.5rem;
+      text-shadow: 0 2px 10px rgba(160, 255, 160, 0.3);
+      position: relative;
+      z-index: 2;
+    }
+
+    h2 {
+      font-size: 1.9rem;
+      border-bottom: 1px solid var(--border-light);
+      padding-bottom: 0.5rem;
+      margin-bottom: 1.5rem;
+      text-transform: uppercase;
+      display: inline-block;
+      background: var(--grad-mint);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      border-bottom-color: #3a553a;
+      position: relative;
+      z-index: 2;
+    }
+
+    a {
+      color: #b0d0b0;
+      text-decoration: none;
+      border-bottom: 1px dotted #3a553a;
+      transition: all 0.15s ease;
+    }
+
+    a:hover {
+      color: #ffffff;
+      border-bottom: 2px solid #b0ffb0;
+    }
+
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 2rem 2.5rem;
+      position: relative;
+      z-index: 2;
+    }
+
+    /* ХЕДЕР (такой же, как на главной, ссылки рабочие) */
+    .site-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      border: 2px solid #2a402a;
+      padding: 1.2rem 2rem;
+      margin-bottom: 3rem;
+      background: rgba(15, 21, 15, 0.75);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      box-shadow: 0 10px 25px -10px rgba(160, 255, 160, 0.2), inset 0 1px 3px rgba(160, 255, 160, 0.1);
+      position: relative;
+      z-index: 10;
+    }
+
+    .logo-area {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .logo {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: #f0fff0;
+      letter-spacing: -1px;
+      background: var(--grad-1);
+      padding: 0.2rem 1rem;
+      border: 1px solid #4a6a4a;
+      transform: skewX(-6deg);
+      text-shadow: 0 0 8px rgba(160, 255, 160, 0.4);
+    }
+
+    .logo span {
+      font-weight: 300;
+      background: var(--grad-mint);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .tagline {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      color: #a0c0a0;
+      border-left: 1px solid #3a553a;
+      padding-left: 20px;
+      background: var(--grad-mint);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .main-nav ul {
+      display: flex;
+      gap: 2rem;
+      list-style: none;
+    }
+
+    .main-nav a {
+      font-weight: 600;
+      font-size: 1.1rem;
+      border: none;
+      text-transform: lowercase;
+      border-bottom: 2px solid transparent;
+      padding-bottom: 4px;
+      background: linear-gradient(135deg, #a0d0a0, #f0fff0);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      transition: 0.2s;
+      cursor: pointer;
+    }
+
+    .main-nav a:hover {
+      border-bottom: 2px solid #b0ffb0;
+      background: linear-gradient(135deg, #f0fff0, #ffffff);
+      -webkit-background-clip: text;
+      background-clip: text;
+    }
+
+    .badge {
+      background: rgba(26, 35, 26, 0.8);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      border: 1px solid #3a553a;
+      color: #c0e0c0;
+      padding: 0.2rem 1rem;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      box-shadow: 0 2px 5px rgba(160, 255, 160, 0.1);
+    }
+
+    /* СПЕЦИАЛЬНО ДЛЯ СТРАНИЦЫ ПРОЕКТОВ: грид карточек */
+    .projects-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+      gap: 2rem;
+      margin: 2.5rem 0 4rem 0;
+    }
+
+    .project-card {
+      background: rgba(15, 21, 15, 0.75);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid #2a3a2a;
+      padding: 2rem 1.8rem;
+      transition: 0.2s ease;
+      box-shadow: 0 5px 0 #1a251a, 0 0 30px rgba(0, 0, 0, 0.5);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .project-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--grad-mint);
+      opacity: 0.4;
+    }
+
+    .project-card:hover {
+      border-color: #6a9a6a;
+      background: rgba(26, 35, 26, 0.85);
+      box-shadow: 0 8px 0 #2a402a, var(--glow-mint), 0 0 40px rgba(160, 255, 160, 0.2);
+      transform: translateY(-2px);
+    }
+
+    .project-card:hover::before {
+      opacity: 1;
+      height: 4px;
+    }
+
+    .project-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+
+    .project-team {
+      font-size: 1.2rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, #c0e0c0, #f0fff0);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .project-title {
+      font-size: 2rem;
+      font-weight: 700;
+      background: var(--grad-mint);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      border-left: 3px solid #b0ffb0;
+      padding-left: 1rem;
+      margin: 0.3rem 0 1rem 0;
+      line-height: 1.2;
+    }
+
+    .project-desc {
+      color: #d0e8d0;
+      margin-bottom: 1.5rem;
+      font-size: 1rem;
+      flex: 1;
+    }
+
+    .project-meta {
+      color: #80a080;
+      font-family: 'Courier New', monospace;
+      font-size: 0.95rem;
+      border-top: 1px dashed #2a402a;
+      padding-top: 1.2rem;
+      margin-top: 0.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .tech-stack {
+      display: flex;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+      background: rgba(26, 35, 26, 0.6);
+      padding: 0.3rem 1rem;
+      border-radius: 20px;
+      border: 1px solid #3a553a;
+      font-size: 0.85rem;
+    }
+
+    .project-link {
+      font-weight: 600;
+      border: none;
+      background: linear-gradient(135deg, #b0ffb0, #f0fff0);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      border-bottom: 2px solid transparent;
+      padding-bottom: 2px;
+      cursor: pointer;
+    }
+
+    .project-link:hover {
+      border-bottom: 2px solid #b0ffb0;
+      background: linear-gradient(135deg, #ffffff, #ffffff);
+      -webkit-background-clip: text;
+      background-clip: text;
+    }
+
+    .dev-status {
+      display: inline-block;
+      background: rgba(160, 255, 160, 0.1);
+      border: 1px solid #4a7a4a;
+      border-radius: 30px;
+      padding: 0.2rem 1.2rem;
+      font-size: 0.8rem;
+      color: #a0f0a0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .empty-folder-message {
+      text-align: center;
+      padding: 4rem 2rem;
+      background: rgba(15, 21, 15, 0.6);
+      border: 2px dashed #2a4a2a;
+      border-radius: 8px;
+      color: #a0c0a0;
+      font-size: 1.3rem;
+      margin: 3rem 0;
+    }
+
+    .back-link {
+      margin: 2rem 0;
+      display: inline-block;
+      background: rgba(26, 35, 26, 0.6);
+      padding: 0.5rem 1.5rem;
+      border: 1px solid #3a5a3a;
+      cursor: pointer;
+    }
+
+    .site-footer {
+      margin-top: 5rem;
+      border-top: 1px solid #1a2a1a;
+      padding-top: 2rem;
+      color: #80a080;
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 700px) {
+      .projects-grid { grid-template-columns: 1fr; }
+      .site-header { flex-direction: column; align-items: start; }
+      h1 { font-size: 2.2rem; }
+      .container { padding: 1rem; }
+    }
+
+    /* СТИЛИ ДЛЯ ЗАГРУЗКИ */
+    .page-loader {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #0a0f0a;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      transition: opacity 0.6s ease, visibility 0.6s ease;
+      opacity: 1;
+      visibility: visible;
+    }
+    
+    .page-loader.fade-out {
+      opacity: 0;
+      visibility: hidden;
+    }
+    
+    .loader-content {
+      text-align: center;
+    }
+    
+    .loader-logo {
+      font-size: 4rem;
+      font-weight: 800;
+      color: #f0fff0;
+      letter-spacing: -2px;
+      background: linear-gradient(135deg, #1a231a 0%, #2d402d 50%, #1a231a 100%);
+      padding: 0.5rem 2rem;
+      border: 2px solid #4a6a4a;
+      transform: skewX(-6deg);
+      text-shadow: 0 0 15px rgba(160, 255, 160, 0.5);
+      margin-bottom: 2rem;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    
+    .loader-spinner {
+      width: 60px;
+      height: 60px;
+      margin: 0 auto;
+      border: 3px solid rgba(100, 255, 100, 0.1);
+      border-top: 3px solid #b0ffb0;
+      border-right: 3px solid #80b080;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      box-shadow: 0 0 20px rgba(160, 255, 160, 0.3);
+    }
+    
+    .loader-text {
+      margin-top: 1.5rem;
+      color: #a0c0a0;
+      font-size: 1.2rem;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      animation: glow 2s ease-in-out infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    @keyframes pulse {
+      0%, 100% { transform: skewX(-6deg) scale(1); opacity: 1; }
+      50% { transform: skewX(-6deg) scale(1.05); opacity: 0.9; }
+    }
+    
+    @keyframes glow {
+      0%, 100% { text-shadow: 0 0 5px rgba(160, 255, 160, 0.3); }
+      50% { text-shadow: 0 0 20px rgba(160, 255, 160, 0.7); }
+    }
+  </style>
+</head>
+<body>
+  <!-- ЭКРАН ЗАГРУЗКИ -->
+  <div class="page-loader" id="pageLoader">
+    <div class="loader-content">
+      <div class="loader-logo">SLC</div>
+      <div class="loader-spinner"></div>
+      <div class="loader-text">загрузка...</div>
+    </div>
+  </div>
+
+  <!-- Фоновые эффекты (как на главной) -->
+  <div class="glow-spot"></div>
+  <div class="glow-spot-2"></div>
+  <div class="noise-overlay"></div>
+
+<div class="container">
+
+  <!-- ШАПКА (ссылка на главную, чтобы можно было вернуться) -->
+  <header class="site-header">
+    <div class="logo-area">
+      <div class="logo">SLC<span>Team</span></div>
+      <div class="tagline">ShadowLuaCloud · проекты</div>
+    </div>
+    <nav class="main-nav">
+      <ul>
+        <li><a href="index.html" class="nav-link">главная</a></li>
+        <li><a href="SLCteam.html" class="nav-link">команда</a></li>
+        <li><a href="project.html" class="nav-link" style="border-bottom: 2px solid #b0ffb0;">проекты</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <!-- ЗАГОЛОВОК СТРАНИЦЫ -->
+  <section style="margin-bottom: 2rem;">
+    <h1>проекты · SLC</h1>
+  </section>
+
+  <!-- ========== ДИНАМИЧЕСКИЙ ВЫВОД ПРОЕКТОВ ИЗ ПАПКИ /PROJECTS/ ========== -->
+  <div id="projects-container" class="projects-grid">
+    <!-- Сюда будут вставлены карточки проектов скриптом -->
+  </div>
+
+  <!-- Сообщение, если папка пуста или не найдена (появится если js ничего не добавит) -->
+  <div id="empty-folder-message" class="empty-folder-message" style="display: none;">
+    ⚡ папка /projects/ пуста или не найдена. Добавьте проекты.
+  </div>
+
+  <script>
+    (function() {
+      // Этот код ЭМУЛИРУЕТ чтение папки /projects/.
+      // ТЕПЕРЬ ТОЛЬКО ОДИН ПРОЕКТ: CHECKCLOUD с правильной ссылкой на CheckCloud.html
+      const projectsFromFolder = [
+        {
+          team: "SLCTeam",
+          title: "CheckCloud",
+          description: "Утилита для удаление дебаггеров, управление shell, usernit, автозагрузка, реестр, winlogon, планировщик задач. Управление Windows пользователей.",
+          tech: ["C++", "WinAPI", "ImGui"],
+          status: "общедоступен",
+          link: "CheckCloud.html", // ← ссылка на отдельную страницу проекта
+          slug: "checkcloud"
+        }
+      ];
+
+      const container = document.getElementById('projects-container');
+      const emptyMsg = document.getElementById('empty-folder-message');
+
+      if (!projectsFromFolder || projectsFromFolder.length === 0) {
+        // Папка пуста — показываем сообщение
+        if (emptyMsg) emptyMsg.style.display = 'block';
+      } else {
+        // Рендерим карточки проектов
+        projectsFromFolder.forEach(proj => {
+          const card = document.createElement('div');
+          card.className = 'project-card';
+
+          const headerDiv = document.createElement('div');
+          headerDiv.className = 'project-header';
+          headerDiv.innerHTML = `
+            <span class="project-team">${proj.team}</span>
+            ${proj.status ? `<span class="dev-status">⏱ ${proj.status}</span>` : ''}
+          `;
+
+          const title = document.createElement('h3');
+          title.className = 'project-title';
+          title.textContent = proj.title;
+
+          const desc = document.createElement('p');
+          desc.className = 'project-desc';
+          desc.textContent = proj.description;
+
+          const metaDiv = document.createElement('div');
+          metaDiv.className = 'project-meta';
+
+          const techSpan = document.createElement('span');
+          techSpan.className = 'tech-stack';
+          techSpan.textContent = proj.tech.join(' · ');
+
+          // СОЗДАЁМ ССЫЛКУ ПРАВИЛЬНО
+          const link = document.createElement('a');
+          link.href = proj.link;                // ← CheckCloud.html
+          link.className = 'project-link';
+          link.textContent = 'Просмотр →';
+          link.target = proj.link === 'CheckCloud.html' ? '_self' : '_blank'; // открываем в том же окне
+
+          metaDiv.appendChild(techSpan);
+          metaDiv.appendChild(link);
+
+          card.appendChild(headerDiv);
+          card.appendChild(title);
+          card.appendChild(desc);
+          card.appendChild(metaDiv);
+
+          container.appendChild(card);
+        });
+      }
+
+      // Если проектов нет, показываем заглушку
+      if (projectsFromFolder.length === 0 && emptyMsg) {
+        emptyMsg.style.display = 'block';
+      }
+    })();
+  </script>
+
+
+  <!-- Футер -->
+  <footer class="site-footer">
+    <div>© ShadowLuaCloud (SLCTeam) 2026</div>
+    <div><a href="#" class="nav-link">github/slcteam</a></div>
+  </footer>
+
+</div>  
+<!-- конец container -->
+
+<!-- нижняя полоска -->
+<div style="background: linear-gradient(90deg, #0a0f0a, #b0ffb0, #0a0f0a); height:3px; width:100%;"></div>
+
+<!-- СКРИПТ ДЛЯ ЗАГРУЗКИ И ПЛАВНЫХ ПЕРЕХОДОВ -->
+<script>
+  (function() {
+    // Убираем экран загрузки после полной загрузки страницы
+    window.addEventListener('load', function() {
+      const loader = document.getElementById('pageLoader');
+      if (loader) {
+        setTimeout(function() {
+          loader.classList.add('fade-out');
+          // Полностью убираем из DOM после завершения анимации
+          setTimeout(function() {
+            loader.style.display = 'none';
+          }, 600);
+        }, 800); // Небольшая задержка, чтобы увидеть анимацию
+      }
+    });
+
+    // Плавные переходы между страницами
+    const navLinks = document.querySelectorAll('.nav-link');
+    
+    navLinks.forEach(link => {
+      link.addEventListener('click', function(e) {
+        // Проверяем, что ссылка ведет на другую страницу (не якорь)
+        const href = this.getAttribute('href');
+        if (href && !href.startsWith('#') && href !== '#' && href !== '') {
+          // Для демонстрации разрешаем переход только на index.html, team.html, projects.html и CheckCloud.html
+          if (href === 'index.html' || href === 'team.html' || href === 'projects.html' || href === 'CheckCloud.html') {
+            e.preventDefault();
+            
+            // Показываем loader (он скрыт, но мы можем его временно показать)
+            const loader = document.getElementById('pageLoader');
+            if (loader) {
+              loader.style.display = 'flex';
+              loader.classList.remove('fade-out');
+            }
+            
+            // Плавно скрываем body
+            document.body.classList.add('fade-out');
+            
+            // Переходим на новую страницу после задержки
+            setTimeout(function() {
+              window.location.href = href;
+            }, 400);
+          }
+          // Для других ссылок (0xlab) просто добавляем плавное исчезновение,
+          // но они никуда не ведут (заглушка)
+          else if (href === '#') {
+            e.preventDefault();
+            // Ничего не делаем или можно показать уведомление
+          }
+        }
+      });
+    });
+  })();
+</script>
+</body>
+</html>
